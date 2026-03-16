@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "shopping-cart-app"
+        DOCKER_TAG = "latest"
+        SONAR_SERVER = "sonarqube-server"
+    }
+
+    tools {
+        maven "maven"
+        jdk "jdk17"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/yourusername/shopping-cart.git'
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('OWASP Dependency Scan') {
+            steps {
+                dependencyCheck additionalArguments: '--scan .', odcInstallation: 'OWASP-Dependency-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONAR_SERVER}") {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh """
+                docker stop shopping-cart || true
+                docker rm shopping-cart || true
+                docker run -d -p 8081:8080 --name shopping-cart ${DOCKER_IMAGE}:${DOCKER_TAG}
+                """
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo "Application deployed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs."
+        }
+    }
+}
