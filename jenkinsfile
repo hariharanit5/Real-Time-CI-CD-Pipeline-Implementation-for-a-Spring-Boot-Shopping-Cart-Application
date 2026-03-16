@@ -16,7 +16,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/yourusername/shopping-cart.git'
+                git branch: 'main', url: 'https://github.com/hariharanit5/Real-Time-CI-CD-Pipeline-Implementation-for-a-Spring-Boot-Shopping-Cart-Application.git'
             }
         }
 
